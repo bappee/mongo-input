@@ -52,23 +52,54 @@ app.get ('/products', (req,res)=>{
 // });
  
 // //3rd get
-app.get('/users/:id', (req,res)=>{
+app.get('/product/:key', (req,res)=>{
     
-    const Id = req.params.id;
-    const name = users[Id]; 
-    
-    res.send({Id,name});
+    const key = req.params.key;
+    const client = new MongoClient(uri, { useNewUrlParser: true });
+    client.connect(err => {
+      const collection = client.db("onlineStore").collection("products");
+      collection.find({key}).toArray((err,documents)=>{
+         if(err){
+             console.log(err)
+         }
+         else{
+          res.send(documents[0]);
+         }
+              
+     })
+      client.close();
+    });
 });
+//review post
+app.post('/getProductKey', (req,res)=>{
+    
+  const key = req.params.key;
+  const productKeys = req.body;
+  console.log(productKeys);
 
-//post
-
+  const client = new MongoClient(uri, { useNewUrlParser: true });
+  client.connect(err => {
+    const collection = client.db("onlineStore").collection("products");
+    collection.find({key:{$in:productKeys}}).toArray((err,documents)=>{
+       if(err){
+           console.log(err)
+       }
+       else{
+        res.send(documents);
+       }
+            
+   })
+    client.close();
+  });
+});
+//post for amazon
 app.post('/addProduct',(req,res)=>{
   const product = req.body;
   console.log(product)
 
   client.connect(err => {
     const collection = client.db("onlineStore").collection("products");
-    collection.insertOne(product,(err,result)=>{
+    collection.insert(product,(err,result)=>{
        if(err){
            console.log(err)
        }
@@ -80,7 +111,37 @@ app.post('/addProduct',(req,res)=>{
    client.close();
   });
    
+});
+
+//place order
+app.post('/placeOrder',(req,res)=>{
+  const totalInfo = req.body;
+  totalInfo.orderTime= new Date();
+  console.log(totalInfo);
+
+  client.connect(err => {
+    const collection = client.db("onlineStore").collection("orders");
+    collection.insertOne(totalInfo,(err,result)=>{
+       if(err){
+           console.log(err)
+       }
+       else{
+        res.send(result.ops[0]);
+        res.status(500).send({message:err})
+       }
+            
+   })
+   client.close();
+  });
+   
 })
+
+
+
+
+
+
+
 
 
 
